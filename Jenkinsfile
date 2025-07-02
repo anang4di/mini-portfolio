@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'mini-portfolio'
-        TAG = 'latest'
-        EC2_USER = 'ubuntu'
-        EC2_HOST = '54.179.246.50'
+        TAG = "${params.TAG}"
+        EC2_HOST = "${params.EC2_HOST}"
+        EC2_USER = "${params.EC2_USER}"
         SSH_KEY_ID = 'ec2-app-server-ssh-key'
     }
 

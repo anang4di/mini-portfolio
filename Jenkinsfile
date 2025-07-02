@@ -18,7 +18,13 @@ pipeline {
 
         stage('Gitleaks Scan') {
             steps {
-                sh 'gitleaks detect --source=. --exit-code 1'
+                sh '''
+                    gitleaks detect \
+                        --source=. \
+                        --report-format=json \
+                        --report-path=gitleaks-report.json \
+                        --exit-code 1
+                '''
             }
         }
 
@@ -27,6 +33,19 @@ pipeline {
                 script {
                     sh "docker build -t ${IMAGE_NAME}:${TAG} ."
                 }
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh """
+                    trivy image \
+                        --format json \
+                        --output trivy-report.json \
+                        --exit-code 1 \
+                        --severity HIGH,CRITICAL \
+                        ${IMAGE_NAME}:${TAG}
+                """
             }
         }
 
@@ -64,7 +83,8 @@ pipeline {
 
     post {
         always {
-            sh "rm -f ${IMAGE_NAME}.tar"
+            sh "rm -f ${IMAGE_NAME}.tar || true"
+            archiveArtifacts artifacts: '*.json', allowEmptyArchive: true
         }
     }
 }

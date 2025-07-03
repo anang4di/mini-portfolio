@@ -73,18 +73,19 @@ pipeline {
                     string(credentialsId: 'ec2-user', variable: 'EC2_USER')
                 ]) {
                     sshagent (credentials: [SSH_KEY_ID]) {
-                        sh '''
+                        sh """
                             ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST '
-                                docker load -i $IMAGE_NAME.tar &&
-                                docker stop $IMAGE_NAME || true &&
-                                docker rm $IMAGE_NAME || true &&
-                                docker run -d --name $IMAGE_NAME -p 80:80 $IMAGE_NAME:$TAG
+                                docker load -i ${IMAGE_NAME}.tar &&
+                                docker stop ${IMAGE_NAME} || true &&
+                                docker rm ${IMAGE_NAME} || true &&
+                                docker run -d --name ${IMAGE_NAME} -p 80:80 ${IMAGE_NAME}:${TAG}
                             '
-                        '''
+                        """
                     }
                 }
             }
         }
+
     }
 
     post {

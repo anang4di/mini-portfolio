@@ -28,28 +28,26 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t ${IMAGE_NAME}:${TAG} ."
-                }
+                sh 'docker build -t $IMAGE_NAME:$TAG .'
             }
         }
 
         stage('Trivy Image Scan') {
             steps {
-                sh """
+                sh '''
                     trivy image \
                         --format json \
                         --output trivy-report.json \
                         --exit-code 1 \
                         --severity HIGH,CRITICAL \
-                        ${IMAGE_NAME}:${TAG}
-                """
+                        $IMAGE_NAME:$TAG
+                '''
             }
         }
 
         stage('Save Docker Image to Tar') {
             steps {
-                sh "docker save -o ${IMAGE_NAME}.tar ${IMAGE_NAME}:${TAG}"
+                sh 'docker save -o $IMAGE_NAME.tar $IMAGE_NAME:$TAG'
             }
         }
 
@@ -59,10 +57,10 @@ pipeline {
                     string(credentialsId: 'ec2-host', variable: 'EC2_HOST'),
                     string(credentialsId: 'ec2-user', variable: 'EC2_USER')
                 ]) {
-                    sshagent (credentials: ["${SSH_KEY_ID}"]) {
-                        sh """
-                            scp -o StrictHostKeyChecking=no ${IMAGE_NAME}.tar ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/
-                        """
+                    sshagent (credentials: [SSH_KEY_ID]) {
+                        sh '''
+                            scp -o StrictHostKeyChecking=no $IMAGE_NAME.tar $EC2_USER@$EC2_HOST:/home/$EC2_USER/
+                        '''
                     }
                 }
             }
@@ -74,15 +72,15 @@ pipeline {
                     string(credentialsId: 'ec2-host', variable: 'EC2_HOST'),
                     string(credentialsId: 'ec2-user', variable: 'EC2_USER')
                 ]) {
-                    sshagent (credentials: ["${SSH_KEY_ID}"]) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
-                                docker load -i ${IMAGE_NAME}.tar &&
-                                docker stop ${IMAGE_NAME} || true &&
-                                docker rm ${IMAGE_NAME} || true &&
-                                docker run -d --name ${IMAGE_NAME} -p 80:80 ${IMAGE_NAME}:${TAG}
+                    sshagent (credentials: [SSH_KEY_ID]) {
+                        sh '''
+                            ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST '
+                                docker load -i $IMAGE_NAME.tar &&
+                                docker stop $IMAGE_NAME || true &&
+                                docker rm $IMAGE_NAME || true &&
+                                docker run -d --name $IMAGE_NAME -p 80:80 $IMAGE_NAME:$TAG
                             '
-                        """
+                        '''
                     }
                 }
             }
@@ -91,7 +89,7 @@ pipeline {
 
     post {
         always {
-            sh "rm -f ${IMAGE_NAME}.tar || true"
+            sh 'rm -f $IMAGE_NAME.tar || true'
             archiveArtifacts artifacts: '*.json', allowEmptyArchive: true
         }
     }

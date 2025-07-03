@@ -3,9 +3,7 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'mini-portfolio'
-        TAG = "${params.TAG}"
-        EC2_HOST = "${params.EC2_HOST}"
-        EC2_USER = "${params.EC2_USER}"
+        TAG = 'latest'
         SSH_KEY_ID = 'ec2-app-server-ssh-key'
     }
 
@@ -57,25 +55,35 @@ pipeline {
 
         stage('Copy Image to EC2') {
             steps {
-                sshagent (credentials: ["${SSH_KEY_ID}"]) {
-                    sh """
-                        scp -o StrictHostKeyChecking=no ${IMAGE_NAME}.tar ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/
-                    """
+                withCredentials([
+                    string(credentialsId: 'ec2-host', variable: 'EC2_HOST'),
+                    string(credentialsId: 'ec2-user', variable: 'EC2_USER')
+                ]) {
+                    sshagent (credentials: ["${SSH_KEY_ID}"]) {
+                        sh """
+                            scp -o StrictHostKeyChecking=no ${IMAGE_NAME}.tar ${EC2_USER}@${EC2_HOST}:/home/${EC2_USER}/
+                        """
+                    }
                 }
             }
         }
 
         stage('Load and Run on EC2') {
             steps {
-                sshagent (credentials: ["${SSH_KEY_ID}"]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
-                            docker load -i ${IMAGE_NAME}.tar &&
-                            docker stop ${IMAGE_NAME} || true &&
-                            docker rm ${IMAGE_NAME} || true &&
-                            docker run -d --name ${IMAGE_NAME} -p 80:80 ${IMAGE_NAME}:${TAG}
-                        '
-                    """
+                withCredentials([
+                    string(credentialsId: 'ec2-host', variable: 'EC2_HOST'),
+                    string(credentialsId: 'ec2-user', variable: 'EC2_USER')
+                ]) {
+                    sshagent (credentials: ["${SSH_KEY_ID}"]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                                docker load -i ${IMAGE_NAME}.tar &&
+                                docker stop ${IMAGE_NAME} || true &&
+                                docker rm ${IMAGE_NAME} || true &&
+                                docker run -d --name ${IMAGE_NAME} -p 80:80 ${IMAGE_NAME}:${TAG}
+                            '
+                        """
+                    }
                 }
             }
         }

@@ -25,6 +25,13 @@ pipeline {
             }
         }
 
+        stage('Quality Gate Check') {
+            steps {
+                waitForQualityGate abortPipeline: true
+                echo 'Quality Gate passed!'
+            }
+        }
+
         stage('Gitleaks Scan') {
             steps {
                 sh '''
